@@ -7,6 +7,7 @@ import { healthRouter } from './routes/health.js';
 import { authRouter } from './routes/auth.js';
 import { productsRouter } from './routes/products.js';
 import { chatRouter } from './routes/chat.js';
+import { usersRouter } from './routes/users.js';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use('/health', healthRouter);
 app.use('/auth', authRouter);
 app.use('/products', productsRouter);
 app.use('/chat', chatRouter);
+app.use('/users', usersRouter);
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (error instanceof ZodError) { 

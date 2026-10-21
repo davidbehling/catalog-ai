@@ -1,16 +1,19 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
-import { Bot, Boxes, LogOut, MessageCircle, PackagePlus, Send, ShieldCheck, Sparkles, Trash2, Pencil, LayoutDashboard } from 'lucide-react';
+import { Bot, Boxes, LogOut, MessageCircle, PackagePlus, Send, ShieldCheck, Sparkles, Trash2, Pencil, LayoutDashboard, Users, UserPlus } from 'lucide-react';
 import { api, clearSession, getUser, saveSession } from '../lib/api';
 
 type User = { id: string; name: string; email: string; role: 'admin' | 'user'; companyId: string; companyName?: string };
 type Product = { _id: string; name: string; description: string; price: number; category: string; imageUrl?: string };
 type ChatMessage = { role: 'assistant' | 'user'; content: string };
+type TeamMember = { id: string; name: string; email: string; role: 'admin' | 'user'; companyId: string; createdAt: string };
+type Tab = 'products' | 'chat' | 'users';
 
 export default function App() {
   const [user, setUser] = useState<User | null>(getUser());
   const [mode, setMode] = useState<'login' | 'register'>('login');
-  const [tab, setTab] = useState<'products' | 'chat'>('products');
+  const [tab, setTab] = useState<Tab>('products');
   const [products, setProducts] = useState<Product[]>([]);
+  const [members, setMembers] = useState<TeamMember[]>([]);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState('admin-a@example.com');
@@ -22,11 +25,18 @@ export default function App() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', price: '0', category: 'Geral', imageUrl: '' });
+  const [showUserForm, setShowUserForm] = useState(false);
+  const [userForm, setUserForm] = useState({ name: '', email: '', password: '' });
   const chatMessagesRef = useRef<HTMLDivElement>(null);
 
   async function loadProducts() {
     const result = await api<{ products: Product[] }>('/products');
     setProducts(result.products);
+  }
+
+  async function loadMembers() {
+    const result = await api<{ users: TeamMember[] }>('/users');
+    setMembers(result.users);
   }
 
   useEffect(() => {
@@ -38,9 +48,15 @@ export default function App() {
     container.scrollTop = container.scrollHeight;
   }, [messages, tab, busy]);
 
-  useEffect(() => { 
-    if (user) loadProducts().catch((e: Error) => setError(e.message)); 
+  useEffect(() => {
+    if (user) loadProducts().catch((e: Error) => setError(e.message));
   }, [user]);
+
+  useEffect(() => {
+    if (user?.role !== 'admin') return;
+
+    loadMembers().catch((e: Error) => setError(e.message));
+  }, [user, tab]);
 
   async function submitAuth(event: FormEvent) {
     event.preventDefault();
@@ -65,6 +81,7 @@ export default function App() {
     clearSession();
     setUser(null);
     setProducts([]);
+    setMembers([]);
 
     setMessages([
       {
@@ -79,6 +96,7 @@ export default function App() {
     setTab('products');
     setShowForm(false);
     setEditing(null);
+    setShowUserForm(false);
   }
 
   function startCreate() {
@@ -130,6 +148,23 @@ export default function App() {
       await loadProducts(); 
     } catch (e) { 
       setError((e as Error).message); 
+    }
+  }
+
+  async function saveUser(event: FormEvent) {
+    event.preventDefault();
+    setBusy(true);
+    setError('');
+
+    try {
+      await api('/users', { method: 'POST', body: JSON.stringify(userForm) });
+      setShowUserForm(false);
+      setUserForm({ name: '', email: '', password: '' });
+      await loadMembers();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -196,6 +231,12 @@ export default function App() {
             <span className="nav-new">AI</span>
         </button>
 
+        { user.role === 'admin' &&
+        <button className={`nav-item ${tab === 'users' ? 'active' : ''}`} onClick={() => setTab('users')}>
+            <Users size={18}/>
+            Usuários
+        </button>}
+
         <div className="sidebar-bottom">
           <div className="ai-card">
             <div className="ai-card-icon">
@@ -223,9 +264,9 @@ export default function App() {
 
       <main className="main-area">
         <header className="topbar">
-          <div className="breadcrumbs">Workspace 
-            <span>/</span> 
-            <strong>{tab === 'products' ? 'Produtos' : 'Agente IA'}</strong>
+          <div className="breadcrumbs">Workspace
+            <span>/</span>
+            <strong>{tab === 'products' ? 'Produtos' : tab === 'chat' ? 'Agente IA' : 'Usuários'}</strong>
           </div>
           <div className="topbar-right">
             <span className="status-dot" /> Sistema operacional
@@ -388,7 +429,51 @@ export default function App() {
                 <p className="chat-disclaimer">As respostas são geradas por IA com base nos dados encontrados no catálogo da sua empresa.</p>
               </section>
             </>
-          }   
+          }
+          { tab === 'users' && user.role === 'admin' && <>
+            <div className="page-heading">
+              <div>
+                <span className="eyebrow">EQUIPE</span>
+                <h1>Usuários</h1>
+                <p>Gerencie quem tem acesso ao catálogo da sua empresa.</p>
+              </div>
+              <button className="primary-button compact" onClick={() => setShowUserForm(true)}>
+                <UserPlus size={17}/> Novo usuário
+              </button>
+            </div>
+            <div className="section-heading">
+              <div>
+                <h2>Membros da empresa</h2>
+                <p>Somente administradores podem adicionar usuários.</p>
+              </div>
+                <span className="count-pill">{members.length} {members.length === 1 ? 'usuário' : 'usuários'}</span>
+            </div>
+            { members.length ?
+              <div className="user-table">
+                <div className="user-table-head">
+                  <span>Nome</span>
+                  <span>E-mail</span>
+                  <span>Perfil</span>
+                  <span>Desde</span>
+                </div>
+                {members.map((member) => <div className="user-row" key={member.id}>
+                  <div className="user-identity">
+                    <span className="avatar small">{member.name.slice(0, 1).toUpperCase()}</span>
+                    <strong>{member.name}</strong>
+                  </div>
+                  <span className="user-email">{member.email}</span>
+                  <span className={`role-pill ${member.role}`}>{member.role === 'admin' ? 'Administrador' : 'Usuário'}</span>
+                  <span className="user-since">{new Date(member.createdAt).toLocaleDateString('pt-BR')}</span>
+                </div>)}
+              </div> :
+              <div className="empty-state">
+                <Users size={32}/>
+                <h3>Nenhum usuário por aqui</h3>
+                <p>Adicione o primeiro membro da sua equipe.</p>
+                <button className="primary-button compact" onClick={() => setShowUserForm(true)}>Adicionar usuário</button>
+              </div>
+            }
+          </>}
         </div>      
       </main>
       {showForm && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowForm(false); }}>
@@ -418,7 +503,27 @@ export default function App() {
           </div>
         </form>
       </div>
-      }    
+      }
+      {showUserForm && <div className="modal-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) setShowUserForm(false); }}>
+        <form className="product-modal" onSubmit={saveUser}>
+          <div className="modal-heading">
+            <div>
+              <span className="eyebrow">EQUIPE</span>
+              <h2>Novo usuário</h2>
+            </div>
+              <button type="button" className="icon-button" onClick={() => setShowUserForm(false)}>×</button>
+          </div>
+          <label>Nome<input required minLength={2} maxLength={80} value={userForm.name} onChange={(e) => setUserForm({ ...userForm, name: e.target.value })} placeholder="Nome completo"/></label>
+          <label>E-mail<input required type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })} placeholder="colaborador@empresa.com"/></label>
+          <label>Senha provisória<input required type="password" minLength={8} maxLength={128} value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })} placeholder="Mínimo de 8 caracteres"/></label>
+          <p className="modal-hint">O usuário será criado com perfil de acesso e vinculada à empresa {user.companyName ?? 'atual'}. Ele poderá consultar o catálogo e usar o agente de IA.</p>
+          <div className="modal-actions">
+            <button type="button" className="secondary-button" onClick={() => setShowUserForm(false)}>Cancelar</button>
+            <button className="primary-button" disabled={busy}>{busy ? 'Criando…' : 'Criar usuário'}</button>
+          </div>
+        </form>
+      </div>
+      }
     </div>
   );
 }

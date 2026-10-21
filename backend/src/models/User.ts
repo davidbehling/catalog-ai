@@ -8,7 +8,7 @@ const userSchema = new Schema({
   companyId: { type: Schema.Types.ObjectId, ref: 'Company', required: true, index: true }
 }, { timestamps: true });
 
-userSchema.index({ companyId: 1, email: 1 }, { unique: true });
+userSchema.index({ email: 1 }, { unique: true });
 
 export type UserDocument = InferSchemaType<typeof userSchema>;
 

@@ -44,6 +44,8 @@ const catalogs = [
 ];
 
 await connectDatabase();
+await User.collection.dropIndex('companyId_1_email_1').catch(() => undefined);
+await User.syncIndexes();
 
 const passwordHash = await bcrypt.hash('Demo1234!', 12);
 
