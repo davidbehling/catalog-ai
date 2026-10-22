@@ -18,16 +18,39 @@ export default function UsersPage({ user, active, onError }: UsersPageProps) {
   const [pendingMember, setPendingMember] = useState<TeamMember | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function loadMembers() {
+  const companyId = user.companyId;
+
+  async function fetchMembers() {
     const result = await api<{ users: TeamMember[] }>('/users');
-    setMembers(result.users);
+    return result.users;
   }
 
   useEffect(() => {
     if (!active) return;
 
-    loadMembers().catch((e: Error) => onError(e.message));
-  }, [active]);
+    let cancelled = false;
+
+    setInviteOpen(false);
+    setPendingMember(null);
+
+    fetchMembers()
+      .then((loaded) => {
+        if (cancelled) return;
+
+        setMembers(loaded);
+      })
+      .catch((e: Error) => {
+        if (cancelled) return;
+
+        onError(e.message);
+      });
+
+    return () => { cancelled = true; };
+  }, [active, companyId]);
+
+  async function loadMembers() {
+    setMembers(await fetchMembers());
+  }
 
   async function changeStatus(status: 'pending' | 'suspended') {
     if (!pendingMember) return;

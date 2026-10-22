@@ -26,6 +26,14 @@ export default function ChatPanel({ user, active, onError }: ChatPanelProps) {
   const [busy, setBusy] = useState(false);
   const chatMessagesRef = useRef<HTMLDivElement>(null);
 
+  const companyId = user.companyId;
+
+  useEffect(() => {
+    setMessages([WELCOME]);
+    setMessage('Quais produtos vocês têm?');
+    setBusy(false);
+  }, [companyId]);
+
   useEffect(() => {
     const container = chatMessagesRef.current;
     if (!container) return;

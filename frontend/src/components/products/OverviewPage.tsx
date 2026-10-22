@@ -12,19 +12,45 @@ type OverviewPageProps = {
 
 export default function OverviewPage({ user, onError }: OverviewPageProps) {
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
 
   const canManage = user.role === 'admin';
+  const companyId = user.companyId;
 
-  async function loadProducts() {
+  async function fetchProducts() {
     const result = await api<{ products: Product[] }>('/products');
-    setProducts(result.products);
+    return result.products;
   }
 
   useEffect(() => {
-    loadProducts().catch((e: Error) => onError(e.message));
-  }, []);
+    let cancelled = false;
+
+    setLoading(true);
+    setModalOpen(false);
+    setEditing(null);
+
+    fetchProducts()
+      .then((loaded) => {
+        if (cancelled) return;
+
+        setProducts(loaded);
+        setLoading(false);
+      })
+      .catch((e: Error) => {
+        if (cancelled) return;
+
+        setLoading(false);
+        onError(e.message);
+      });
+
+    return () => { cancelled = true; };
+  }, [companyId]);
+
+  async function loadProducts() {
+    setProducts(await fetchProducts());
+  }
 
   function startCreate() {
     setEditing(null);
@@ -103,7 +129,13 @@ export default function OverviewPage({ user, onError }: OverviewPageProps) {
         <span className="count-pill">{products.length} itens</span>
       </div>
 
-      {products.length ? (
+      {loading ? (
+        <div className="empty-state">
+          <Boxes size={32}/>
+          <h3>Carregando catálogo…</h3>
+          <p>Buscando os produtos da empresa selecionada.</p>
+        </div>
+      ) : products.length ? (
         <div className="product-grid">
           {products.map((product) => (
             <ProductCard
