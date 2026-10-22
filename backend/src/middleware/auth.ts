@@ -15,18 +15,28 @@ export const requireAuth: RequestHandler = (req, res, next) => {
   try {
     const payload = jwt.verify(header.slice(7), env.JWT_SECRET) as TokenPayload;
 
-    if (!payload.sub || !payload.companyId || !['admin', 'user'].includes(payload.role)) {
+    if (!payload.sub || !['admin', 'user'].includes(payload.role)) {
       res.status(401).json({ error: 'Token inválido' });
       return;
     }
 
-    req.auth = { userId: payload.sub, companyId: payload.companyId, role: payload.role };
+    req.auth = { userId: payload.sub, companyId: payload.companyId ?? '', role: payload.role };
 
     next();
   } catch {
 
     res.status(401).json({ error: 'Token inválido ou expirado' });
   }
+};
+
+/** Rotas que operam sobre dados de uma empresa exigem uma empresa ativa no token. */
+export const requireCompany: RequestHandler = (req, res, next) => {
+  if (!req.auth?.companyId) {
+    res.status(403).json({ error: 'Você não possui empresa ativa' });
+    return;
+  }
+
+  next();
 };
 
 export const requireAdmin: RequestHandler = (req, res, next) => {

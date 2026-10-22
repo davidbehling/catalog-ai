@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAuth } from '../middleware/auth.js';
+import { requireAuth, requireCompany } from '../middleware/auth.js';
 import { answerProductQuestion } from '../services/chat.js';
 
 export const chatRouter = Router();
 
 chatRouter.use(requireAuth);
+chatRouter.use(requireCompany);
 
 chatRouter.post('/', async (req, res, next) => {
   try {

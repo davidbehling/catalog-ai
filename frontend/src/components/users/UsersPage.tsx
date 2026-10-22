@@ -2,7 +2,9 @@ import { useEffect, useState } from 'react';
 import { UserPlus, Users } from 'lucide-react';
 import { api } from '../../lib/api';
 import type { TeamMember, User } from '../../types';
-import UserModal from './UserModal';
+import InviteUserModal from './InviteUserModal';
+import SuspendUserModal from './SuspendUserModal';
+import UserRow from './UserRow';
 
 type UsersPageProps = {
   user: User;
@@ -12,7 +14,9 @@ type UsersPageProps = {
 
 export default function UsersPage({ user, active, onError }: UsersPageProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [pendingMember, setPendingMember] = useState<TeamMember | null>(null);
+  const [busy, setBusy] = useState(false);
 
   async function loadMembers() {
     const result = await api<{ users: TeamMember[] }>('/users');
@@ -25,6 +29,22 @@ export default function UsersPage({ user, active, onError }: UsersPageProps) {
     loadMembers().catch((e: Error) => onError(e.message));
   }, [active]);
 
+  async function changeStatus(status: 'pending' | 'suspended') {
+    if (!pendingMember) return;
+
+    setBusy(true);
+
+    try {
+      await api(`/users/${pendingMember.participantId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+      await loadMembers();
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <div className="page-heading">
@@ -33,8 +53,8 @@ export default function UsersPage({ user, active, onError }: UsersPageProps) {
           <h1>Usuários</h1>
           <p>Gerencie quem tem acesso ao catálogo da sua empresa.</p>
         </div>
-        <button className="primary-button compact" onClick={() => setModalOpen(true)}>
-          <UserPlus size={17}/> Novo usuário
+        <button className="primary-button compact" onClick={() => setInviteOpen(true)}>
+          <UserPlus size={17}/> Convidar usuário
         </button>
       </div>
 
@@ -53,34 +73,42 @@ export default function UsersPage({ user, active, onError }: UsersPageProps) {
             <span>E-mail</span>
             <span>Perfil</span>
             <span>Desde</span>
+            <span>Status</span>
+            <span/>
           </div>
           {members.map((member) => (
-            <div className="user-row" key={member.id}>
-              <div className="user-identity">
-                <span className="avatar small">{member.name.slice(0, 1).toUpperCase()}</span>
-                <strong>{member.name}</strong>
-              </div>
-              <span className="user-email">{member.email}</span>
-              <span className={`role-pill ${member.role}`}>{member.role === 'admin' ? 'Administrador' : 'Usuário'}</span>
-              <span className="user-since">{new Date(member.createdAt).toLocaleDateString('pt-BR')}</span>
-            </div>
+            <UserRow
+              key={member.participantId}
+              member={member}
+              isSelf={member.id === user.id}
+              onToggleStatus={setPendingMember}
+            />
           ))}
         </div>
       ) : (
         <div className="empty-state">
           <Users size={32}/>
           <h3>Nenhum usuário por aqui</h3>
-          <p>Adicione o primeiro membro da sua equipe.</p>
-          <button className="primary-button compact" onClick={() => setModalOpen(true)}>Adicionar usuário</button>
+          <p>Convide o primeiro membro da sua equipe.</p>
+          <button className="primary-button compact" onClick={() => setInviteOpen(true)}>Convidar usuário</button>
         </div>
       )}
 
-      {modalOpen && (
-        <UserModal
+      {inviteOpen && (
+        <InviteUserModal
           companyName={user.companyName}
-          onClose={() => setModalOpen(false)}
+          onClose={() => setInviteOpen(false)}
           onSaved={loadMembers}
           onError={onError}
+        />
+      )}
+
+      {pendingMember && (
+        <SuspendUserModal
+          member={pendingMember}
+          busy={busy}
+          onClose={() => setPendingMember(null)}
+          onConfirm={changeStatus}
         />
       )}
     </>

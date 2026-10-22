@@ -1,11 +1,12 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Product } from '../models/Product.js';
-import { requireAdmin, requireAuth } from '../middleware/auth.js';
+import { requireAdmin, requireAuth, requireCompany } from '../middleware/auth.js';
 
 export const productsRouter = Router();
 
 productsRouter.use(requireAuth);
+productsRouter.use(requireCompany);
 
 const productSchema = z.object({ name: z.string().min(1).max(120), description: z.string().min(1).max(2000), price: z.number().min(0), category: z.string().min(1).max(80), imageUrl: z.string().url().or(z.literal('')).optional() });
 

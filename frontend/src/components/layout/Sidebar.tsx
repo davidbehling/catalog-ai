@@ -1,14 +1,24 @@
 import { Bot, LayoutDashboard, LogOut, MessageCircle, Sparkles, Users } from 'lucide-react';
 import type { Tab, User } from '../../types';
+import CompanySwitcher from './CompanySwitcher';
 
 type SidebarProps = {
   user: User;
   tab: Tab;
+  switchingCompany: boolean;
   onTabChange: (tab: Tab) => void;
+  onSwitchCompany: (companyId: string) => void;
   onLogout: () => void;
 };
 
-export default function Sidebar({ user, tab, onTabChange, onLogout }: SidebarProps) {
+export default function Sidebar({
+  user,
+  tab,
+  switchingCompany,
+  onTabChange,
+  onSwitchCompany,
+  onLogout
+}: SidebarProps) {
   return (
     <aside className="sidebar">
       <div className="brand">
@@ -16,14 +26,12 @@ export default function Sidebar({ user, tab, onTabChange, onLogout }: SidebarPro
         <span className="brand-dot">.</span>
       </div>
 
-      <div className="workspace">
-        <span className="workspace-icon">{(user.companyName ?? 'M').slice(0, 1).toUpperCase()}</span>
-        <div>
-          <strong>{user.companyName ?? 'Minha empresa'}</strong>
-          <small>Plano demonstração</small>
-        </div>
-        <span className="chevron">⌄</span>
-      </div>
+      <CompanySwitcher
+        memberships={user.memberships}
+        activeCompanyId={user.companyId}
+        busy={switchingCompany}
+        onSwitch={onSwitchCompany}
+      />
 
       <div className="nav-label">WORKSPACE</div>
 

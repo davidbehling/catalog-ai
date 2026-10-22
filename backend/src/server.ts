@@ -8,6 +8,7 @@ import { authRouter } from './routes/auth.js';
 import { productsRouter } from './routes/products.js';
 import { chatRouter } from './routes/chat.js';
 import { usersRouter } from './routes/users.js';
+import { notificationsRouter } from './routes/notifications.js';
 
 const app = express();
 
@@ -18,11 +19,12 @@ app.use('/auth', authRouter);
 app.use('/products', productsRouter);
 app.use('/chat', chatRouter);
 app.use('/users', usersRouter);
+app.use('/notifications', notificationsRouter);
 
 app.use((error: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-  if (error instanceof ZodError) { 
-    res.status(400).json({ error: 'Dados inválidos', details: error.flatten() }); 
-    return; 
+  if (error instanceof ZodError) {
+    res.status(400).json({ error: 'Dados inválidos', details: error.flatten() });
+    return;
   }
 
   console.error(error);
@@ -33,6 +35,6 @@ app.use((error: unknown, _req: express.Request, res: express.Response, _next: ex
 });
 
 connectDatabase().then(() => app.listen(env.PORT, () => console.log(`API disponível em http://localhost:${env.PORT}`)))
-  .catch((error) => { 
-    console.error('Falha ao iniciar aplicação', error); process.exit(1); 
+  .catch((error) => {
+    console.error('Falha ao iniciar aplicação', error); process.exit(1);
   });
