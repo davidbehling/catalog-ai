@@ -387,3 +387,7 @@ vinculado por um novo `Participant` e recebe a notificação de convite.
 Este projeto está em desenvolvimento. As funcionalidades descritas acima foram implementadas e validadas
 manualmente no ambiente local, mas ainda carecem de testes automatizados e de uma revisão de segurança antes de
 serem consideradas prontas para produção.
+
+## Demonstração da Aplicação
+
+https://github.com/user-attachments/assets/3df1b272-8638-45e8-ad9a-1f0d01ef0c4c
